@@ -162,12 +162,16 @@ while gameRunning:
             print("You do not have enough credits to double your bet!")
             continue
 
-        else: #forfeit
+        elif choice == "forfeit":
             credits += (bet * 0.5)
             bank -= (bet * 0.5)
             replayQuery = True
             playerAction = False
             break
+        else:
+            print("Invalid command!")
+            time.sleep(2)
+            continue
 
         #Tarkistetaan tuliko bust, jos ei ja pelaaja ei valinnut forfeit tai stand, palataan valintoihin
 
@@ -177,6 +181,7 @@ while gameRunning:
             time.sleep(1)
             print("You got a bust!")
             time.sleep(1)
+            dealerAction = False
             replayQuery = True
             break
         else:
@@ -205,6 +210,10 @@ while gameRunning:
             playerWin(False)
             time.sleep(3)
             replayQuery = True
+        elif dealerhand >= 17 and dealerhand > playerhand:
+            print("Dealer's hand is greater than yours. You lose!")
+            time.sleep(3)
+            replayQuery = True
         elif dealerhand < 17:
             print("Dealer draws a card...")
             dealCard(dealer)
@@ -218,9 +227,11 @@ while gameRunning:
     while replayQuery:
         if credits < 10:
             print("You do not have enough credits left to keep playing. Closing blackjack.")
+            gameRunning = False
             break
         elif bank < 10:
             print("You cleaned out the dealer! Closing blackjack.")
+            gamerunning = False
             break
         else:
             pass
@@ -233,7 +244,10 @@ while gameRunning:
         elif replay == "NO":
             print("Closing blacjack")
             time.sleep(1)
+            gameRunning = False
             break
         else:
             print("Invalid command")
             continue
+    if gameRunning == False:
+        break
