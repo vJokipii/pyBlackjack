@@ -19,12 +19,12 @@ dealer = []
 
 #Funktioita
 
-def dealCard(hand):
+def dealCard(hand): #Annetaan pakasta kortti kädelle x
     card = random.choice(deck.cards)
     hand.append(card)
     deck.cards.remove(card)
 
-def checkHand(hand):
+def checkHand(hand): #Tarkistetaan käden x korttien arvo, ässä antaa 11 jos voi, jos ei niin 1
     value = 0
     ace = 0
     faces = ["J","Q","K"]
@@ -162,7 +162,7 @@ while gameRunning:
             print("You do not have enough credits to double your bet!")
             continue
 
-        elif choice == "forfeit":
+        elif choice == "forfeit": #Annetaan pelaajalle takaisin puolet panoksesta ja kysytään halutaanko pelata uudestaan
             credits += (bet * 0.5)
             bank -= (bet * 0.5)
             replayQuery = True
