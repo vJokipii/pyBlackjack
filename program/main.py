@@ -1,6 +1,7 @@
 import random
 import time
 import classes
+import gui
 
 credits = 300
 bank = 600
