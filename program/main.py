@@ -14,7 +14,7 @@ credits = 500
 bank = 10000
 bet = 0
 
-GameState = Enum("GameState", "Betting PlayerAction DealerAction Results")
+GameState = Enum("GameState", "Betting Dealing PlayerAction DealerAction Results")
 GameState = GameState.Betting
 
 #Luodaan korttipakka & kädet
@@ -169,6 +169,8 @@ def PlaceBet():
     timer.singleShot(3200, InitialDeal)
 
 def InitialDeal():
+    global GameState
+    GameState = GameState.Dealing
     timer = QTimer()
     f.PrepLabelUpdate(lbl_gameinfo, "Your turn. Choose an action.")
     timer.singleShot(500, DealPlayer)
