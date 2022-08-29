@@ -1,3 +1,4 @@
+from email.mime import application
 import random
 import sys
 from telnetlib import GA
@@ -190,6 +191,9 @@ def DealDealer():
     AddCard(card, dealer)
     deck.cards.remove(card)
 
+def Quit():
+    sys.exit(app.exec())
+
 ##############################################################################################################################################
 ##############################################################################################################################################
 ##############################################################################################################################################
@@ -279,6 +283,7 @@ btn_quit.setStyleSheet(
 "*:hover{background: '#483D8B';}"
 )
 maingrid.addWidget(btn_quit, 8,0, alignment=QtCore.Qt.AlignCenter)
+btn_quit.clicked.connect(Quit)
 
 #Display window
 window.show()
