@@ -5,6 +5,7 @@ from time import sleep
 from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget, QGridLayout, QHBoxLayout, QLineEdit
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtGui import QCursor, QPixmap, QPainter
+from PyQt5.QtCore import QTimer
 import classes
 import functions as f
 from enum import Enum
@@ -20,6 +21,28 @@ GameState = GameState.Betting
 deck = classes.Deck()
 player = []
 dealer = []
+
+#Initialisoidaan ikkuna
+app = QApplication(sys.argv)
+window = QWidget()
+window.setWindowTitle("Blackjack")
+window.setFixedWidth(700)
+window.setFixedHeight(650)
+window.setStyleSheet("background: #161219;")
+
+#Layout hierarkia
+#maingrid sisältää kaikki laatikot
+maingrid = QGridLayout()
+window.setLayout(maingrid)
+maingrid.setRowStretch(0, 2) #dealercards
+maingrid.setRowStretch(1, 2) #playercards
+maingrid.setRowStretch(2, 1) #padding
+maingrid.setRowStretch(3, 0) #economy
+maingrid.setRowStretch(4, 0) #actions
+maingrid.setRowStretch(5, 0) #betting
+maingrid.setRowStretch(6, 0) #padding
+maingrid.setRowStretch(7, 0) #gameinfo
+maingrid.setRowStretch(8, 0) #quit nappi
 
 #Oma custom widget luokka jolla voidaan piirtää pelaajien kortit widget elementtinä näytölle ja lisätä ne laatikoihin
 class GuiCard(QWidget):
@@ -38,7 +61,7 @@ class GuiCard(QWidget):
         font.setPointSize(24)
         painter.setFont(font)
         painter.setRenderHint(QPainter.Antialiasing)
-        rect = QtCore.QRect(0,0,80,120)
+        rect = QtCore.QRect(0,0,70,110)
         pen = QtGui.QPen()
         brush = QtGui.QBrush()
         brush.setStyle(QtCore.Qt.SolidPattern)
@@ -49,19 +72,11 @@ class GuiCard(QWidget):
         if self.suit == "D" or self.suit == "H": painter.setPen(QtGui.QColor("red"))
         else: painter.setPen(QtGui.QColor("black"))
         painter.drawText(3,25,(f"{self.symbols[self.suit]}")) #yläkulma
-        if self.name == 10: painter.drawText(25,70,(f"{self.name}")) #keskusta jos 10
-        elif isinstance(self.name, str): painter.drawText(33,70,(f"{self.name}")) #keskusta jos kirjain
-        else: painter.drawText(30,70,(f"{self.name}")) #keskusta jos 2 - 9
-        painter.drawText(55,115,(f"{self.symbols[self.suit]}")) #alakulma
+        if self.name == 10: painter.drawText(20,70,(f"{self.name}")) #keskusta jos 10
+        elif isinstance(self.name, str): painter.drawText(25,70,(f"{self.name}")) #keskusta jos kirjain
+        else: painter.drawText(27,70,(f"{self.name}")) #keskusta jos 2 - 9
+        painter.drawText(45,105,(f"{self.symbols[self.suit]}")) #alakulma
         painter.end()
-
-#Initialisoidaan ikkuna
-app = QApplication(sys.argv)
-window = QWidget()
-window.setWindowTitle("Blackjack")
-window.setFixedWidth(700)
-window.setFixedHeight(650)
-window.setStyleSheet("background: #161219;")
 
 ##############################################################################################################################################
 ############################################### FUNKTIOT #####################################################################################
@@ -93,10 +108,12 @@ def CreateLabel(label, layout): #Funktio jolla luodaan economy labelit
     )
     layout.addWidget(label)
 
+
 def AddCard(card, layout):
     newcard = GuiCard(card.suit, card.name)
-    if layout == player: playercards.addWidget(newcard)
-    else: dealercards.addWidget(newcard)
+    if layout == player: playercards.addWidget(newcard, 1)
+    else: dealercards.addWidget(newcard, 1)
+
 
 def BetPlusFifty():
     if GameState != GameState.Betting: return
@@ -145,35 +162,43 @@ def PlaceBet():
     global lbl_credits
     credits -= bet
     bank += bet
+    timer = QTimer()
     f.PlaceBet(bet, credits, bank, lbl_gameinfo, lbl_bet, lbl_bank, lbl_credits)
+    f.PrepLabelUpdate(lbl_gameinfo, "The dealer is dealing cards...")
+    timer.singleShot(3000, f.UpdateLabel)
+    timer.singleShot(3200, InitialDeal)
 
+def InitialDeal():
+    timer = QTimer()
+    f.PrepLabelUpdate(lbl_gameinfo, "Your turn. Choose an action.")
+    timer.singleShot(500, DealPlayer)
+    timer.singleShot(1000, DealPlayer)
+    timer.singleShot(1500, DealDealer)
+    timer.singleShot(2000, f.UpdateLabel)
+
+def DealPlayer():
+    card = random.choice(deck.cards)
+    player.append(card)
+    AddCard(card, player)
+    deck.cards.remove(card)
+
+def DealDealer():
+    card = random.choice(deck.cards)
+    dealer.append(card)
+    AddCard(card, dealer)
+    deck.cards.remove(card)
 
 ##############################################################################################################################################
 ##############################################################################################################################################
 ##############################################################################################################################################
-
-
-#Layout hierarkia
-#maingrid sisältää kaikki laatikot
-maingrid = QGridLayout()
-window.setLayout(maingrid)
-maingrid.setRowStretch(0, 2) #dealercards
-maingrid.setRowStretch(1, 2) #playercards
-maingrid.setRowStretch(2, 1) #padding
-maingrid.setRowStretch(3, 0) #economy
-maingrid.setRowStretch(4, 0) #actions
-maingrid.setRowStretch(5, 0) #betting
-maingrid.setRowStretch(6, 0) #padding
-maingrid.setRowStretch(7, 0) #gameinfo
-maingrid.setRowStretch(8, 0) #quit nappi
 
 #dealercards laatikko johon laitetaan jakajan kortit
 dealercards = QHBoxLayout()
-maingrid.addLayout(dealercards,0,0)
+maingrid.addLayout(dealercards, 0,0)
 
 #playercards laatikko johon laitetaan pelaajan kortit
 playercards = QHBoxLayout()
-maingrid.addLayout(playercards,1,0)
+maingrid.addLayout(playercards, 1,0)
 
 #economy laatikko johon laitetaan bet, credits ja bank labelit
 economy = QHBoxLayout()
@@ -238,7 +263,7 @@ lbl_gameinfo.setStyleSheet(
 )
 maingrid.addWidget(lbl_gameinfo, 6,0, alignment=QtCore.Qt.AlignCenter)
 
-#quit nappi johonki
+#quit nappi johonki :)
 btn_quit = QPushButton("Quit")
 btn_quit.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
 btn_quit.setFixedWidth(60)

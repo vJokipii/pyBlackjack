@@ -1,6 +1,10 @@
+from enum import Enum
 import random
 from PyQt5 import *
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
+labeltext = ""
+label = None
 
 def BetPlusFifty(bet, lbl_info, lbl_bet):
     bet += 50
@@ -34,11 +38,19 @@ def PlaceBet(bet, credits, bank, lbl_info, lbl_bet, lbl_bank, lbl_credits):
     lbl_bank.setText(f"Bank: {bank}")
     lbl_bet.setText(f"Bet: {bet}")
 
-def dealCard(hand): #Annetaan pakasta kortti kädelle x
-    card = random.choice(deck.cards)
-    hand.append(card)
-    AddCard(card, hand)
-    deck.cards.remove(card)
+def PrepLabelUpdate(lbl, value):
+    global label
+    global labeltext
+    label = lbl
+    labeltext = value
+
+def UpdateLabel():
+    global label
+    global labeltext
+    if label != None and labeltext != "": label.setText(labeltext)
+    else: pass
+    label = None
+    labeltext = ""
 
 def checkHand(hand): #Tarkistetaan käden x korttien arvo, ässä antaa 11 jos voi, jos ei niin 1
     value = 0
@@ -57,6 +69,7 @@ def checkHand(hand): #Tarkistetaan käden x korttien arvo, ässä antaa 11 jos v
             ace -= 1
     return value
 
+"""
 def playerWin(blackjack):
     global credits
     global bet
@@ -73,17 +86,4 @@ def playerWin(blackjack):
         bank -= payout
         credits += payout
         UpdateLabel(lbl_gameinfo, (f"Congratulations, you beat the dealer! You received {payout} credits (1:1) and now have {credits} credits in total."))
-
-def tie():
-    global credits
-    global bet
-    global bank
-    global GameState
-    GameState = GameState.Results
-    credits += bet
-    bank -= bet
-    UpdateLabel(lbl_gameinfo, "The round resulted in a tie. You get your bet back.")
-    UpdateLabel(lbl_credits, credits)
-    UpdateLabel(lbl_bank, bank)
-    UpdateLabel(lbl_bet, 0)
-    sleep(2)
+"""

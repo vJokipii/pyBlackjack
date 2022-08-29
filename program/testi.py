@@ -66,9 +66,11 @@ card = GuiCard("D", 10)
 card2 = GuiCard("S", 5)
 card3 = GuiCard("H", "J")
 
-cardlayout.addWidget(card)
-cardlayout.addWidget(card2)
-cardlayout.addWidget(card3)
+cardlayout.setStretch(3, 5)
+
+cardlayout.addWidget(card, 1, alignment=QtCore.Qt.AlignCenter)
+cardlayout.addWidget(card2, 1, alignment=QtCore.Qt.AlignCenter)
+cardlayout.addWidget(card3, 1, alignment=QtCore.Qt.AlignCenter)
 
 #Display window
 window.show()
