@@ -1,254 +1,258 @@
 import random
-import time
+import sys
+from telnetlib import GA
+from time import sleep
+from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget, QGridLayout, QHBoxLayout, QLineEdit
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtGui import QCursor, QPixmap, QPainter
 import classes
-import gui
+import functions as f
+from enum import Enum
 
-credits = 300
-bank = 600
+credits = 500
+bank = 10000
 bet = 0
 
-gameRunning = False
-playerAction = False
-dealerAction = False
-replayQuery = False
+GameState = Enum("GameState", "Betting PlayerAction DealerAction Results")
+GameState = GameState.Betting
 
 #Luodaan korttipakka & kädet
-
 deck = classes.Deck()
 player = []
 dealer = []
 
-#Funktioita
+#Oma custom widget luokka jolla voidaan piirtää pelaajien kortit widget elementtinä näytölle ja lisätä ne laatikoihin
+class GuiCard(QWidget):
+    def __init__(self, suit, name):
+        super(GuiCard, self).__init__()
+        self.suit = suit
+        self.name = name
+        self.symbols = {"D" : "♦", "C" : "♣", "H" : "♥", "S" : "♠"}
+        layout = QVBoxLayout()
+        self.setLayout(layout)
 
-def dealCard(hand): #Annetaan pakasta kortti kädelle x
-    card = random.choice(deck.cards)
-    hand.append(card)
-    deck.cards.remove(card)
+    def paintEvent(self, e):
+        painter = QPainter(self)
+        font = painter.font()
+        font.setFamily('Impact')
+        font.setPointSize(24)
+        painter.setFont(font)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = QtCore.QRect(0,0,80,120)
+        pen = QtGui.QPen()
+        brush = QtGui.QBrush()
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        brush.setColor(QtGui.QColor('#FFF8DC'))
+        painter.setPen(pen)
+        painter.setBrush(brush)
+        painter.drawRoundedRect(rect, 5, 5)
+        if self.suit == "D" or self.suit == "H": painter.setPen(QtGui.QColor("red"))
+        else: painter.setPen(QtGui.QColor("black"))
+        painter.drawText(3,25,(f"{self.symbols[self.suit]}")) #yläkulma
+        if self.name == 10: painter.drawText(25,70,(f"{self.name}")) #keskusta jos 10
+        elif isinstance(self.name, str): painter.drawText(33,70,(f"{self.name}")) #keskusta jos kirjain
+        else: painter.drawText(30,70,(f"{self.name}")) #keskusta jos 2 - 9
+        painter.drawText(55,115,(f"{self.symbols[self.suit]}")) #alakulma
+        painter.end()
 
-def checkHand(hand): #Tarkistetaan käden x korttien arvo, ässä antaa 11 jos voi, jos ei niin 1
-    value = 0
-    ace = 0
-    faces = ["J","Q","K"]
-    for card in hand:
-        if card.name in range(11):
-            value += card.name
-        elif card.name in faces:
-            value += 10
-        else:
-            value += 11
-            ace += 1
-        while ace and value > 21:
-            value -= 10
-            ace -= 1
-    return value
+#Initialisoidaan ikkuna
+app = QApplication(sys.argv)
+window = QWidget()
+window.setWindowTitle("Blackjack")
+window.setFixedWidth(700)
+window.setFixedHeight(650)
+window.setStyleSheet("background: #161219;")
 
-def playerWin(blackjack):
-    global credits
-    global bet
-    global bank
+##############################################################################################################################################
+############################################### FUNKTIOT #####################################################################################
+##############################################################################################################################################
 
-    if blackjack == False:
-        payout = bet*2
-        bank -= payout
-        credits += payout
-        print(f"Congratulations, you beat the dealer! You received {payout} credits (1:1) and now have {credits} in total.")
+def CreateButton(button, layout, width = 70, row = 0, col = 0): #Funktio jolla luodaan nappi haluttuun paikkaan halutuilla asetuksilla, ja säätää tyyliasetukset
+    button.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
+    button.setFixedWidth(width)
+    button.setFixedHeight(25)
+    button.setStyleSheet(
+    "*{border: 3px solid '#DAA520';" +
+    "border-radius: 45px;" +
+    "font-size: 35pc;" +
+    "font-weight: bold;" +
+    "color: 'white'}" +
+    "*:hover{background: '#483D8B';}"
+    )
+    if layout == maingrid:
+        layout.addWidget(button, row, col)
     else:
-        payout = bet + (bet * 1.5)
-        bank -= payout
-        credits += payout
-        print(f"Congratulations, you got a blackjack! You received {payout} credits (3:2) and now have {credits} in total.")
+        layout.addWidget(button, col)
 
-def tie():
+def CreateLabel(label, layout): #Funktio jolla luodaan economy labelit
+    label.setStyleSheet(
+    "color: '#7CFC00';" +
+    "font: 'Helvetica';" +
+    "font-size: 35pc;" +
+    "font-weight: bold;"
+    )
+    layout.addWidget(label)
+
+def AddCard(card, layout):
+    newcard = GuiCard(card.suit, card.name)
+    if layout == player: playercards.addWidget(newcard)
+    else: dealercards.addWidget(newcard)
+
+def BetPlusFifty():
+    if GameState != GameState.Betting: return
     global credits
-    global bet
     global bank
+    global bet
+    global lbl_bet
+    global lbl_gameinfo
+    bet = f.BetPlusFifty(bet, lbl_gameinfo, lbl_bet)
 
-    credits += bet
-    bank -= bet
-    print(f"The round resulted in a tie. You get your bet back.")
-
-def startGame():
+def BetPlusTen():
+    if GameState != GameState.Betting: return
     global credits
-    global bet
     global bank
-    global deck
-    global player
-    global dealer
+    global bet
+    global lbl_bet
+    global lbl_gameinfo
+    bet = f.BetPlusTen(bet,lbl_gameinfo, lbl_bet)
 
-    player = []
-    dealer = []
+def BetMinusTen():
+    if GameState != GameState.Betting: return
+    global credits
+    global bank
+    global bet
+    global lbl_bet
+    global lbl_gameinfo
+    bet = f.BetMinusTen(bet,lbl_gameinfo, lbl_bet)
 
-    deck.resetDeck()
+def BetMinusFifty():
+    if GameState != GameState.Betting: return
+    global credits
+    global bank
+    global bet
+    global lbl_bet
+    global lbl_gameinfo
+    bet = f.BetMinusFifty(bet,lbl_gameinfo, lbl_bet)
+
+def PlaceBet():
+    if GameState != GameState.Betting: return
+    global credits
+    global bank
+    global bet
+    global lbl_bet
+    global lbl_gameinfo
+    global lbl_bank
+    global lbl_credits
     credits -= bet
     bank += bet
-    print(f"You placed a bet for {bet} credits. You now have {credits} credits and the dealer has {bank} credits. Good luck!")
-    time.sleep(2)
-    print("The dealer is dealing the cards...")
+    f.PlaceBet(bet, credits, bank, lbl_gameinfo, lbl_bet, lbl_bank, lbl_credits)
 
-def showHand(hand):
-    for i in range(len(hand)):
-        hand[i].show()
 
-################# GAME LOOP #############################
+##############################################################################################################################################
+##############################################################################################################################################
+##############################################################################################################################################
 
-print("<| BLACKJACK |>")
-print("")
-gameRunning = True
 
-while gameRunning:
-    bet = int(input(f"You have {credits} credits and the dealer has {bank} credits. Place a bet to start the game. "))
-    if bet > credits:
-        print("You do not have that many credits!")
-        continue
-    elif bet < 10:
-        print("The minimum bet is 10 credits!")
-        continue
-    elif bet > bank:
-        print("The dealer does not have that many credits!")
-        continue
-    else:
-        pass
+#Layout hierarkia
+#maingrid sisältää kaikki laatikot
+maingrid = QGridLayout()
+window.setLayout(maingrid)
+maingrid.setRowStretch(0, 2) #dealercards
+maingrid.setRowStretch(1, 2) #playercards
+maingrid.setRowStretch(2, 1) #padding
+maingrid.setRowStretch(3, 0) #economy
+maingrid.setRowStretch(4, 0) #actions
+maingrid.setRowStretch(5, 0) #betting
+maingrid.setRowStretch(6, 0) #padding
+maingrid.setRowStretch(7, 0) #gameinfo
+maingrid.setRowStretch(8, 0) #quit nappi
 
-    time.sleep(1)
-    startGame()
-    time.sleep(4)
+#dealercards laatikko johon laitetaan jakajan kortit
+dealercards = QHBoxLayout()
+maingrid.addLayout(dealercards,0,0)
 
-    #Jaetaan kortit
-    dealCard(player)
-    dealCard(player)
-    dealCard(dealer)
-    dealCard(dealer)
+#playercards laatikko johon laitetaan pelaajan kortit
+playercards = QHBoxLayout()
+maingrid.addLayout(playercards,1,0)
 
-    print(" \nYour hand: ")
-    showHand(player)
-    print(" \nDealer's card:")
-    dealer[0].show()
+#economy laatikko johon laitetaan bet, credits ja bank labelit
+economy = QHBoxLayout()
+maingrid.addLayout(economy,3,0, alignment=QtCore.Qt.AlignCenter)
+economy.setSpacing(50)
 
-    #Tarkistetaan saiko pelaaja blackjackin
-    if checkHand(player) == 21:
-        playerWin(bet,credits,bank, True)
-        playerAction = False
-        replayQuery = True
+lbl_credits = QLabel(text=(f"Credits: {credits}"))
+CreateLabel(lbl_credits, economy)
 
-    time.sleep(3)
+lbl_bank = QLabel(text=(f"Bank: {bank}"))
+CreateLabel(lbl_bank, economy)
 
-    playerAction = True
+lbl_bet = QLabel(text=(f"Bet: {bet}"))
+CreateLabel(lbl_bet, economy)
 
-    while playerAction: #Pelaaja valitsee
-        print(" \nPLAYER ACTIONS")
-        print("hit --> take another card. \nstand --> pass this turn. \ndouble down --> double your bet and take another card. \nforfeit --> lose half of your bet and quit playing this round. \n  ")
-        choice = input("What would you like to do? --> ")
-        if choice == "hit":
-            time.sleep(1)
-            print("Dealer is dealing you a card...")
-            dealCard(player)
-            time.sleep(2)
+#actions laatikko johon laitetaan pelaajan napit
+actions = QHBoxLayout()
+maingrid.addLayout(actions, 4, 0, alignment=QtCore.Qt.AlignCenter)
+btn_hit = QPushButton("Hit")
+CreateButton(btn_hit, actions)
+btn_double = QPushButton("Double")
+CreateButton(btn_double, actions)
+btn_stand = QPushButton("Stand")
+CreateButton(btn_stand, actions)
+btn_forfeit = QPushButton("Forfeit")
+CreateButton(btn_forfeit, actions)
 
-        elif choice == "stand":
-            time.sleep(1)
-            dealerAction = True
-            break
+#betting laatikko johon laitetaan napit joilla nostetaan tai lasketaan panosta
+betting = QHBoxLayout()
+maingrid.addLayout(betting,5,0, alignment=QtCore.Qt.AlignCenter)
+btn_plusfifty = QPushButton("+50")
+btn_plusfifty.clicked.connect(BetPlusFifty)
+CreateButton(btn_plusfifty, betting, 50)
 
-        elif choice == "double down" and credits >= bet:
-            time.sleep(1)
-            credits -= bet
-            bank += bet
-            bet *= 2 #Tuplataan panos jotta osataan maksaa oikea määrä takaisin voitosta
-            print(f"You doubled your bet. Your credits are now at {credits} and the dealer has {bank} credits.")
-            print("Dealer is dealing you a card...")
-            dealCard(player)
-            time.sleep(2)
+btn_plusten = QPushButton("+10")
+btn_plusten.clicked.connect(BetPlusTen)
+CreateButton(btn_plusten, betting, 50)
 
-        elif choice == "double down" and credits < bet:
-            print("You do not have enough credits to double your bet!")
-            continue
+btn_minusten = QPushButton("-10")
+btn_minusten.clicked.connect(BetMinusTen)
+CreateButton(btn_minusten, betting, 50)
 
-        elif choice == "forfeit": #Annetaan pelaajalle takaisin puolet panoksesta ja kysytään halutaanko pelata uudestaan
-            credits += (bet * 0.5)
-            bank -= (bet * 0.5)
-            replayQuery = True
-            playerAction = False
-            break
-        else:
-            print("Invalid command!")
-            time.sleep(2)
-            continue
+btn_minusfifty = QPushButton("-50")
+btn_minusfifty.clicked.connect(BetMinusFifty)
+CreateButton(btn_minusfifty, betting, 50)
 
-        #Tarkistetaan tuliko bust, jos ei ja pelaaja ei valinnut forfeit tai stand, palataan valintoihin
+btn_bet = QPushButton("Place Bet")
+btn_bet.clicked.connect(PlaceBet)
+CreateButton(btn_bet, betting, 75)
 
-        if checkHand(player) > 21:
-            print("Your hand:")
-            showHand(player)
-            time.sleep(1)
-            print("You got a bust!")
-            time.sleep(1)
-            dealerAction = False
-            replayQuery = True
-            break
-        else:
-            print("Your hand:")
-            showHand(player)
-            time.sleep(1)
-            continue
+#tyhjä label padding syistä
+lbl_padding = QLabel(text=" ")
+maingrid.addWidget(lbl_padding, 7,0,alignment=QtCore.Qt.AlignCenter)
 
-    while dealerAction:
-        #Jakajan käsi paljastetaan, jos jakajan käsi on alle 17, jakaja nostaa kortteja niin kauan että peli ratkeaa
-        print("Dealer's hand:")
-        showHand(dealer)
-        time.sleep(1)
-        dealerhand = checkHand(dealer)
-        playerhand = checkHand(player)
-        if dealerhand > 21:
-            print("Dealer got a bust!")
-            playerWin(False)
-            time.sleep(3)
-            replayQuery = True
-        elif dealerhand >= 17 and dealerhand == playerhand:
-            tie()
-            time.sleep(3)
-            replayQuery = True
-        elif dealerhand >= 17 and dealerhand < playerhand:
-            playerWin(False)
-            time.sleep(3)
-            replayQuery = True
-        elif dealerhand >= 17 and dealerhand > playerhand:
-            print("Dealer's hand is greater than yours. You lose!")
-            time.sleep(3)
-            replayQuery = True
-        elif dealerhand < 17:
-            print("Dealer draws a card...")
-            dealCard(dealer)
-            time.sleep(1)
-            continue
-        else:
-            pass
+#gameinfo label joka näyttää pelaajalle tärkeää tietoa
+lbl_gameinfo = QLabel(text="Welcome To Blackjack! Place a bet in order to begin.")
+lbl_gameinfo.setStyleSheet(
+"color: 'white';" +
+"font: 'Helvetica';" +
+"font-size: 35pc;" +
+"font-weight: bold;"
+)
+maingrid.addWidget(lbl_gameinfo, 6,0, alignment=QtCore.Qt.AlignCenter)
 
-        break
+#quit nappi johonki
+btn_quit = QPushButton("Quit")
+btn_quit.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
+btn_quit.setFixedWidth(60)
+btn_quit.setFixedHeight(25)
+btn_quit.setStyleSheet(
+"*{border: 3px solid '#DAA520';" +
+"border-radius: 45px;" +
+"font-size: 35pc;" +
+"font-weight: bold;" +
+"color: 'white'}" +
+"*:hover{background: '#483D8B';}"
+)
+maingrid.addWidget(btn_quit, 8,0, alignment=QtCore.Qt.AlignCenter)
 
-    while replayQuery:
-        if credits < 10:
-            print("You do not have enough credits left to keep playing. Closing blackjack.")
-            gameRunning = False
-            break
-        elif bank < 10:
-            print("You cleaned out the dealer! Closing blackjack.")
-            gamerunning = False
-            break
-        else:
-            pass
-
-        replay = input(f"Would you like to play again? (YES / NO) -> ")
-
-        if replay == "YES":
-            replayQuery = False
-            continue
-        elif replay == "NO":
-            print("Closing blacjack")
-            time.sleep(1)
-            gameRunning = False
-            break
-        else:
-            print("Invalid command")
-            continue
-    if gameRunning == False:
-        break
+#Display window
+window.show()
+sys.exit(app.exec())
