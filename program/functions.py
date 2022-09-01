@@ -3,6 +3,11 @@ import random
 from PyQt5 import *
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
+
+# Ylimääräinen moduuli puhtaasti koodin luettavuussyistä
+# Tänne on heitetty vähän apufunktioita jotka main moduulissa -
+# sotkisivat koodia ja häiritsisivät luettavuutta entisestään.
+
 labeltext = ""
 label = None
 
@@ -68,22 +73,3 @@ def checkHand(hand): #Tarkistetaan käden x korttien arvo, ässä antaa 11 jos v
             value -= 10
             ace -= 1
     return value
-
-"""
-def playerWin(blackjack):
-    global credits
-    global bet
-    global bank
-    global GameState
-    GameState = GameState.Results
-    if blackjack:
-        payout = bet + (bet * 1.5)
-        bank -= payout
-        credits += payout
-        UpdateLabel(lbl_gameinfo, (f"Congratulations, you got a blackjack! You received {payout} credits (3:2) and now have {credits} credits in total."))
-    else:
-        payout = bet*2
-        bank -= payout
-        credits += payout
-        UpdateLabel(lbl_gameinfo, (f"Congratulations, you beat the dealer! You received {payout} credits (1:1) and now have {credits} credits in total."))
-"""

@@ -1,22 +1,20 @@
-from email.mime import application
 import random
 import sys
-from telnetlib import GA
 from time import sleep
-from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget, QGridLayout, QHBoxLayout, QLineEdit
+from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget, QGridLayout, QHBoxLayout
 from PyQt5 import QtGui, QtCore
-from PyQt5.QtGui import QCursor, QPixmap, QPainter
+from PyQt5.QtGui import QCursor, QPainter
 from PyQt5.QtCore import QTimer
 import classes
 import functions as f
-from enum import Enum
 
 credits = 500
 bank = 10000
 bet = 0
 
-GameState = Enum("GameState", "Betting Dealing PlayerAction DealerAction Results")
-GameState = GameState.Betting
+GameRunning = False
+PlayerTurn = False
+DealerTurn = False
 
 #Luodaan korttipakka & kädet
 deck = classes.Deck()
@@ -93,12 +91,25 @@ def CreateButton(button, layout, width = 70, row = 0, col = 0): #Funktio jolla l
     "font-size: 35pc;" +
     "font-weight: bold;" +
     "color: 'white'}" +
-    "*:hover{background: '#483D8B';}"
+    "*:hover{background: '#483D8B';" +
+    "color: '#FFD700'}"
     )
     if layout == maingrid:
         layout.addWidget(button, row, col)
     else:
         layout.addWidget(button, col)
+
+def Toggle_PlayerTurn():
+    global PlayerTurn
+    global lbl_gameinfo
+    PlayerTurn = not PlayerTurn
+    # debug
+    print(PlayerTurn) 
+    if PlayerTurn == True: lbl_gameinfo.setText("Your turn. Choose an action.")
+
+def Toggle_GameRunning():
+    global GameRunning
+    GameRunning = not GameRunning
 
 def CreateLabel(label, layout): #Funktio jolla luodaan economy labelit
     label.setStyleSheet(
@@ -112,48 +123,118 @@ def CreateLabel(label, layout): #Funktio jolla luodaan economy labelit
 
 def AddCard(card, layout):
     newcard = GuiCard(card.suit, card.name)
-    if layout == player: playercards.addWidget(newcard, 1)
-    else: dealercards.addWidget(newcard, 1)
+    layout.addWidget(newcard, 0)
 
+def Hit():
+    global PlayerTurn
+    if not PlayerTurn: return
+    global lbl_gameinfo
+    timer = QTimer()
+    lbl_gameinfo.setText("The dealer is dealing you a card...")
+    timer.singleShot(2000, DealCard_Player)
+    timer.singleShot(2100, Check)
+
+def Forfeit():
+    global PlayerTurn
+    if not PlayerTurn: return
+    global lbl_gameinfo
+    global bet
+    global bank
+    global credits
+    timer = QTimer()
+    lbl_gameinfo.setText(f"You forfeit this round. You get half your bet ({int(bet / 2)}) back.")
+    bank -= int(bet/2)
+    credits += int(bet/2)
+    timer.singleShot(2000, ResetGame)
+
+def Stand():
+    global PlayerTurn
+    global DealerTurn
+    global lbl_gameinfo
+    if not PlayerTurn: return
+    lbl_gameinfo.setText("You ended your turn.")
+    PlayerTurn = False
+    timer = QTimer()
+    timer.singleShot(2000, Dealer_Turn)
+    DealerTurn = True
+
+def Double():
+    global PlayerTurn
+    global bet
+    global bank
+    global credits
+    global lbl_gameinfo
+    global lbl_bet
+    global lbl_bank
+    global lbl_credits
+    timer = QTimer()
+    if not PlayerTurn: return
+    if bank < (bet * 2) or credits < bet:
+        lbl_gameinfo.setText("You cannot double your bet right now.")
+        return
+    credits -= bet
+    bank += bet
+    bet *= 2
+    UpdateEconomy()
+    lbl_gameinfo.setText("You doubled your bet.")
+    #Laitetaan playerturn pois päältä odotuksen ajaksi, ja takaisin päälle vähän ennen Hit funktiota
+    timer.singleShot(2000, Hit)
+
+def Dealer_Turn():
+    global lbl_gameinfo
+    global dealer
+    global dealercards
+    lbl_gameinfo.setText("The dealer is drawing cards...")
+    timer = QTimer()
+    timer.singleShot(700, DealCard_Dealer)
+    timer.singleShot(1300, Check)
 
 def BetPlusFifty():
-    if GameState != GameState.Betting: return
+    global GameRunning
     global credits
     global bank
     global bet
     global lbl_bet
     global lbl_gameinfo
+    if GameRunning == True: return
     bet = f.BetPlusFifty(bet, lbl_gameinfo, lbl_bet)
 
 def BetPlusTen():
-    if GameState != GameState.Betting: return
+    global GameRunning
     global credits
     global bank
     global bet
     global lbl_bet
     global lbl_gameinfo
+    if GameRunning == True: return
     bet = f.BetPlusTen(bet,lbl_gameinfo, lbl_bet)
 
 def BetMinusTen():
-    if GameState != GameState.Betting: return
-    global credits
-    global bank
+    global GameRunning
     global bet
     global lbl_bet
     global lbl_gameinfo
+    if GameRunning == True: return
     bet = f.BetMinusTen(bet,lbl_gameinfo, lbl_bet)
 
 def BetMinusFifty():
-    if GameState != GameState.Betting: return
-    global credits
-    global bank
+    global GameRunning
     global bet
     global lbl_bet
     global lbl_gameinfo
+    if GameRunning == True: return
     bet = f.BetMinusFifty(bet,lbl_gameinfo, lbl_bet)
 
+def UpdateEconomy():
+    global credits
+    global bank
+    global bet
+    lbl_credits.setText(f"Credits: {credits}")
+    lbl_bank.setText(f"Bank: {bank}")
+    lbl_bet.setText(f"Bet: {bet}")
+
 def PlaceBet():
-    if GameState != GameState.Betting: return
+    global GameRunning
     global credits
     global bank
     global bet
@@ -161,6 +242,17 @@ def PlaceBet():
     global lbl_gameinfo
     global lbl_bank
     global lbl_credits
+    if GameRunning == True: return
+    if credits < bet:
+        lbl_gameinfo.setText("You do not have enough credits! Lower your bet.")
+        return
+    elif bank < bet:
+        lbl_gameinfo.setText("The dealer does not have enough credits! Lower your bet.")
+        return
+    elif bet < 10:
+        lbl_gameinfo.setText("The minimum bet is 10 credits.")
+        return
+    else:pass
     credits -= bet
     bank += bet
     timer = QTimer()
@@ -168,28 +260,128 @@ def PlaceBet():
     f.PrepLabelUpdate(lbl_gameinfo, "The dealer is dealing cards...")
     timer.singleShot(3000, f.UpdateLabel)
     timer.singleShot(3200, InitialDeal)
+    Toggle_GameRunning()
 
 def InitialDeal():
-    global GameState
-    GameState = GameState.Dealing
     timer = QTimer()
-    f.PrepLabelUpdate(lbl_gameinfo, "Your turn. Choose an action.")
-    timer.singleShot(500, DealPlayer)
-    timer.singleShot(1000, DealPlayer)
-    timer.singleShot(1500, DealDealer)
-    timer.singleShot(2000, f.UpdateLabel)
+    timer.singleShot(500, DealCard_Player)
+    timer.singleShot(1000, DealCard_Player)
+    timer.singleShot(1500, DealCard_Dealer)
+    timer.singleShot(2000, Check)
+    timer.singleShot(2000, Toggle_PlayerTurn)
 
-def DealPlayer():
+def Check():
+    global dealer
+    global player
+    playervalue = f.checkHand(player)
+    dealervalue = f.checkHand(dealer)
+    global lbl_gameinfo
+    global PlayerTurn
+    global DealerTurn
+    timer = QTimer()
+
+    if len(player) == 2 and playervalue == 21: PlayerWin(True) #Blackjack
+    
+    if playervalue > 21:
+        lbl_gameinfo.setText("You got a bust! The dealer wins this round.")
+        PlayerTurn = False
+        timer.singleShot(3000, ResetGame)
+    elif playervalue <= 21 and PlayerTurn: lbl_gameinfo.setText("Your turn. Choose an action.")
+    
+    if DealerTurn and dealervalue < 17:
+        Dealer_Turn()
+        return
+    elif DealerTurn and dealervalue >= 17:
+        if dealervalue >= 17:
+            if dealervalue > 21:
+                lbl_gameinfo.setText("The dealer got a bust!")
+                timer.singleShot(4000, PlayerWin)
+            else:
+                if dealervalue > playervalue:
+                    lbl_gameinfo.setText("The dealer's hand beats yours! The dealer wins this round.")
+                    timer.singleShot(4000, ResetGame)
+                else:
+                    if dealervalue == playervalue: Tie()
+                    else:
+                        lbl_gameinfo.setText("Your hand beats the dealer's!")
+                        timer.singleShot(4000, PlayerWin)
+
+
+def DealCard_Player():
+    global lbl_gameinfo
     card = random.choice(deck.cards)
     player.append(card)
-    AddCard(card, player)
+    AddCard(card, playercards)
     deck.cards.remove(card)
 
-def DealDealer():
+def DealCard_Dealer():
     card = random.choice(deck.cards)
     dealer.append(card)
-    AddCard(card, dealer)
+    AddCard(card, dealercards)
     deck.cards.remove(card)
+
+def PlayerWin(blackjack = False):
+    global bet
+    global bank
+    global credits
+    global lbl_gameinfo
+    timer = QTimer()
+    payout = 0
+    if blackjack:
+        payout = int(bet + (bet * 1.5))
+        lbl_gameinfo.setText(f"You got a blackjack! You win {payout} (3:2) credits.")
+    else:
+        payout = int(bet * 2)
+        lbl_gameinfo.setText(f"You beat the dealer! You win {payout} (1:1) credits.")
+    credits += payout
+    bank -= payout
+    timer.singleShot(3000, ResetGame)
+
+def Tie():
+    global bet
+    global bank
+    global credits
+    global lbl_gameinfo
+    timer = QTimer()
+    lbl_gameinfo.setText(f"It's a tie! You get your bet ({bet}) back.")
+    credits += bet
+    bank -= bet
+    timer.singleShot(3000, ResetGame())
+
+def ResetGame():
+    global bet
+    global lbl_gameinfo
+    global GameRunning
+    global PlayerTurn
+    global DealerTurn
+    global dealer
+    global player
+    global deck
+    global dealercards
+    global playercards
+    global credits
+    global bank
+    timer = QTimer()
+    deck.resetDeck()
+    dealer.clear()
+    player.clear()
+    for i in reversed(range(dealercards.count())): dealercards.itemAt(i).widget().deleteLater()
+    for i in reversed(range(playercards.count())): playercards.itemAt(i).widget().deleteLater()
+    bet = 0
+    UpdateEconomy()
+    if credits < 10:
+        lbl_gameinfo.setText("You are out of credits! Closing blackjack.")
+        timer.singleShot(3000, Quit)
+        return
+    elif bank < 10:
+        lbl_gameinfo.setText("The dealer is out of credits! Closing blackjack.")
+        timer.singleShot(3000, Quit)
+        return
+    lbl_gameinfo.setText("If you would like to play another round, place a bet.")
+    GameRunning = False
+    PlayerTurn = False
+    DealerTurn = False
+
 
 def Quit():
     sys.exit(app.exec())
@@ -224,12 +416,16 @@ CreateLabel(lbl_bet, economy)
 actions = QHBoxLayout()
 maingrid.addLayout(actions, 4, 0, alignment=QtCore.Qt.AlignCenter)
 btn_hit = QPushButton("Hit")
+btn_hit.clicked.connect(Hit)
 CreateButton(btn_hit, actions)
 btn_double = QPushButton("Double")
+btn_double.clicked.connect(Double)
 CreateButton(btn_double, actions)
 btn_stand = QPushButton("Stand")
+btn_stand.clicked.connect(Stand)
 CreateButton(btn_stand, actions)
 btn_forfeit = QPushButton("Forfeit")
+btn_forfeit.clicked.connect(Forfeit)
 CreateButton(btn_forfeit, actions)
 
 #betting laatikko johon laitetaan napit joilla nostetaan tai lasketaan panosta
@@ -264,7 +460,7 @@ lbl_gameinfo = QLabel(text="Welcome To Blackjack! Place a bet in order to begin.
 lbl_gameinfo.setStyleSheet(
 "color: 'white';" +
 "font: 'Helvetica';" +
-"font-size: 35pc;" +
+"font-size: 45pc;" +
 "font-weight: bold;"
 )
 maingrid.addWidget(lbl_gameinfo, 6,0, alignment=QtCore.Qt.AlignCenter)
@@ -280,7 +476,8 @@ btn_quit.setStyleSheet(
 "font-size: 35pc;" +
 "font-weight: bold;" +
 "color: 'white'}" +
-"*:hover{background: '#483D8B';}"
+"*:hover{background: '#483D8B';" +
+"color: '#FFD700'}"
 )
 maingrid.addWidget(btn_quit, 8,0, alignment=QtCore.Qt.AlignCenter)
 btn_quit.clicked.connect(Quit)
