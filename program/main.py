@@ -149,7 +149,6 @@ def HighlightButtons(buttons, toggle):
             "color: '#FFD700'}"
             )
 
-
 def AddCard(card, layout):
     newcard = GuiCard(card.suit, card.name)
     layout.addWidget(newcard, 0)
@@ -321,6 +320,9 @@ def Check():
         lbl_gameinfo.setText("You got a bust! The dealer wins this round.")
         PlayerTurn = False
         timer.singleShot(3000, ResetGame)
+    elif playervalue < 21 and PlayerTurn:
+        Toggle_PlayerTurn()
+        Toggle_PlayerTurn()
     
     if DealerTurn and dealervalue < 17:
         Dealer_Turn()
