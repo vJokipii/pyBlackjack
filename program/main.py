@@ -8,9 +8,14 @@ from PyQt5.QtCore import QTimer
 import classes
 import functions as f
 
-credits = 500
+credits = 1000
 bank = 10000
 bet = 0
+
+handvalue = 0 #pelaajan käden arvon näyttämistä varten
+
+buttons_playeraction = []
+buttons_betting = []
 
 GameRunning = False
 PlayerTurn = False
@@ -37,11 +42,12 @@ maingrid.setRowStretch(0, 2) #dealercards
 maingrid.setRowStretch(1, 2) #playercards
 maingrid.setRowStretch(2, 1) #padding
 maingrid.setRowStretch(3, 0) #economy
-maingrid.setRowStretch(4, 0) #actions
-maingrid.setRowStretch(5, 0) #betting
-maingrid.setRowStretch(6, 0) #padding
-maingrid.setRowStretch(7, 0) #gameinfo
-maingrid.setRowStretch(8, 0) #quit nappi
+maingrid.setRowStretch(4, 0) #playerhand
+maingrid.setRowStretch(5, 0) #actions
+maingrid.setRowStretch(6, 0) #betting
+maingrid.setRowStretch(7, 0) #padding
+maingrid.setRowStretch(8, 0) #gameinfo
+maingrid.setRowStretch(9, 0) #quit nappi
 
 #Oma custom widget luokka jolla voidaan piirtää pelaajien kortit widget elementtinä näytölle ja lisätä ne laatikoihin
 class GuiCard(QWidget):
@@ -81,14 +87,14 @@ class GuiCard(QWidget):
 ############################################### FUNKTIOT #####################################################################################
 ##############################################################################################################################################
 
-def CreateButton(button, layout, width = 70, row = 0, col = 0): #Funktio jolla luodaan nappi haluttuun paikkaan halutuilla asetuksilla, ja säätää tyyliasetukset
+def CreateButton(button, layout, width = 85, height = 35, row = 0, col = 0): #Funktio jolla luodaan nappi haluttuun paikkaan halutuilla asetuksilla, ja säätää tyyliasetukset
     button.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
     button.setFixedWidth(width)
-    button.setFixedHeight(25)
+    button.setFixedHeight(height)
     button.setStyleSheet(
     "*{border: 3px solid '#DAA520';" +
     "border-radius: 45px;" +
-    "font-size: 35pc;" +
+    "font-size: 45pc;" +
     "font-weight: bold;" +
     "color: 'white'}" +
     "*:hover{background: '#483D8B';" +
@@ -103,9 +109,11 @@ def Toggle_PlayerTurn():
     global PlayerTurn
     global lbl_gameinfo
     PlayerTurn = not PlayerTurn
-    # debug
-    print(PlayerTurn) 
-    if PlayerTurn == True: lbl_gameinfo.setText("Your turn. Choose an action.")
+    if PlayerTurn == True:
+        lbl_gameinfo.setText("Your turn. Choose an action.")
+        HighlightButtons(buttons_playeraction, True)
+    else:
+        HighlightButtons(buttons_playeraction, False)
 
 def Toggle_GameRunning():
     global GameRunning
@@ -115,10 +123,31 @@ def CreateLabel(label, layout): #Funktio jolla luodaan economy labelit
     label.setStyleSheet(
     "color: '#7CFC00';" +
     "font: 'Helvetica';" +
-    "font-size: 35pc;" +
+    "font-size: 50pc;" +
     "font-weight: bold;"
     )
     layout.addWidget(label)
+
+def HighlightButtons(buttons, toggle):
+    if toggle == False:
+        #Listan napit laitetaan harmaaksi
+        for i in buttons:
+            i.setCursor(QCursor(QtCore.Qt.ForbiddenCursor))
+            i.setStyleSheet("*{border: 3px solid '#696969';" +
+            "color: '#696969';}")
+    else:
+        #Listan napit palautetaan
+        for i in buttons:
+            i.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
+            i.setStyleSheet(
+            "*{border: 3px solid '#DAA520';" +
+            "border-radius: 45px;" +
+            "font-size: 45pc;" +
+            "font-weight: bold;" +
+            "color: 'white'}" +
+            "*:hover{background: '#483D8B';" +
+            "color: '#FFD700'}"
+            )
 
 
 def AddCard(card, layout):
@@ -153,7 +182,7 @@ def Stand():
     global lbl_gameinfo
     if not PlayerTurn: return
     lbl_gameinfo.setText("You ended your turn.")
-    PlayerTurn = False
+    Toggle_PlayerTurn()
     timer = QTimer()
     timer.singleShot(2000, Dealer_Turn)
     DealerTurn = True
@@ -186,8 +215,8 @@ def Dealer_Turn():
     global dealercards
     lbl_gameinfo.setText("The dealer is drawing cards...")
     timer = QTimer()
-    timer.singleShot(700, DealCard_Dealer)
-    timer.singleShot(1300, Check)
+    timer.singleShot(1000, DealCard_Dealer)
+    timer.singleShot(1500, Check)
 
 def BetPlusFifty():
     global GameRunning
@@ -242,6 +271,8 @@ def PlaceBet():
     global lbl_gameinfo
     global lbl_bank
     global lbl_credits
+    global buttons_betting
+    global buttons_playeraction
     if GameRunning == True: return
     if credits < bet:
         lbl_gameinfo.setText("You do not have enough credits! Lower your bet.")
@@ -261,6 +292,7 @@ def PlaceBet():
     timer.singleShot(3000, f.UpdateLabel)
     timer.singleShot(3200, InitialDeal)
     Toggle_GameRunning()
+    HighlightButtons(buttons_betting, False)
 
 def InitialDeal():
     timer = QTimer()
@@ -346,7 +378,7 @@ def Tie():
     lbl_gameinfo.setText(f"It's a tie! You get your bet ({bet}) back.")
     credits += bet
     bank -= bet
-    timer.singleShot(3000, ResetGame())
+    timer.singleShot(3000, ResetGame)
 
 def ResetGame():
     global bet
@@ -361,6 +393,8 @@ def ResetGame():
     global playercards
     global credits
     global bank
+    global buttons_betting
+    global buttons_playeraction
     timer = QTimer()
     deck.resetDeck()
     dealer.clear()
@@ -381,6 +415,8 @@ def ResetGame():
     GameRunning = False
     PlayerTurn = False
     DealerTurn = False
+    HighlightButtons(buttons_playeraction, False)
+    HighlightButtons(buttons_betting, True)
 
 
 def Quit():
@@ -390,15 +426,15 @@ def Quit():
 ##############################################################################################################################################
 ##############################################################################################################################################
 
-#dealercards laatikko johon laitetaan jakajan kortit
+#dealercards laatikko johon laitetaan jakajan kortit -RIVI 0
 dealercards = QHBoxLayout()
 maingrid.addLayout(dealercards, 0,0)
 
-#playercards laatikko johon laitetaan pelaajan kortit
+#playercards laatikko johon laitetaan pelaajan kortit -RIVI 1
 playercards = QHBoxLayout()
 maingrid.addLayout(playercards, 1,0)
 
-#economy laatikko johon laitetaan bet, credits ja bank labelit
+#economy laatikko johon laitetaan bet, credits ja bank labelit -RIVI 3
 economy = QHBoxLayout()
 maingrid.addLayout(economy,3,0, alignment=QtCore.Qt.AlignCenter)
 economy.setSpacing(50)
@@ -412,50 +448,76 @@ CreateLabel(lbl_bank, economy)
 lbl_bet = QLabel(text=(f"Bet: {bet}"))
 CreateLabel(lbl_bet, economy)
 
-#actions laatikko johon laitetaan pelaajan napit
+#playerhand label joka näyttää pelaajalle käden arvon -RIVI 4
+lbl_playerhand = QLabel(text="Your Hand:")
+lbl_playerhand.setStyleSheet(
+    "color: '#DC143C';" +
+    "font: 'Helvetica';" +
+    "font-size: 45pc;" +
+    "font-weight: bold;"
+)
+maingrid.addWidget(lbl_playerhand, 4,0, alignment=QtCore.Qt.AlignLeft)
+
+#actions laatikko johon laitetaan pelaajan napit -RIVI 5
 actions = QHBoxLayout()
-maingrid.addLayout(actions, 4, 0, alignment=QtCore.Qt.AlignCenter)
+maingrid.addLayout(actions, 5, 0, alignment=QtCore.Qt.AlignCenter)
+
 btn_hit = QPushButton("Hit")
 btn_hit.clicked.connect(Hit)
 CreateButton(btn_hit, actions)
+buttons_playeraction.append(btn_hit)
+
 btn_double = QPushButton("Double")
 btn_double.clicked.connect(Double)
 CreateButton(btn_double, actions)
+buttons_playeraction.append(btn_double)
+
 btn_stand = QPushButton("Stand")
 btn_stand.clicked.connect(Stand)
 CreateButton(btn_stand, actions)
+buttons_playeraction.append(btn_stand)
+
 btn_forfeit = QPushButton("Forfeit")
 btn_forfeit.clicked.connect(Forfeit)
 CreateButton(btn_forfeit, actions)
+buttons_playeraction.append(btn_forfeit)
 
-#betting laatikko johon laitetaan napit joilla nostetaan tai lasketaan panosta
+#betting laatikko johon laitetaan napit joilla nostetaan tai lasketaan panosta -RIVI 6
 betting = QHBoxLayout()
-maingrid.addLayout(betting,5,0, alignment=QtCore.Qt.AlignCenter)
+maingrid.addLayout(betting,6,0, alignment=QtCore.Qt.AlignCenter)
 btn_plusfifty = QPushButton("+50")
 btn_plusfifty.clicked.connect(BetPlusFifty)
-CreateButton(btn_plusfifty, betting, 50)
+CreateButton(btn_plusfifty, betting, 60, 35)
+buttons_betting.append(btn_plusfifty)
 
 btn_plusten = QPushButton("+10")
 btn_plusten.clicked.connect(BetPlusTen)
-CreateButton(btn_plusten, betting, 50)
+CreateButton(btn_plusten, betting, 60, 35)
+buttons_betting.append(btn_plusten)
 
 btn_minusten = QPushButton("-10")
 btn_minusten.clicked.connect(BetMinusTen)
-CreateButton(btn_minusten, betting, 50)
+CreateButton(btn_minusten, betting, 60, 35)
+buttons_betting.append(btn_minusten)
 
 btn_minusfifty = QPushButton("-50")
 btn_minusfifty.clicked.connect(BetMinusFifty)
-CreateButton(btn_minusfifty, betting, 50)
+CreateButton(btn_minusfifty, betting, 60, 35)
+buttons_betting.append(btn_minusfifty)
 
 btn_bet = QPushButton("Place Bet")
 btn_bet.clicked.connect(PlaceBet)
-CreateButton(btn_bet, betting, 75)
+CreateButton(btn_bet, betting, 90, 35)
+buttons_betting.append(btn_bet)
 
-#tyhjä label padding syistä
+HighlightButtons(buttons_betting, True)
+HighlightButtons(buttons_playeraction, False)
+
+#tyhjä label padding syistä -RIVI 8
 lbl_padding = QLabel(text=" ")
-maingrid.addWidget(lbl_padding, 7,0,alignment=QtCore.Qt.AlignCenter)
+maingrid.addWidget(lbl_padding, 8,0,alignment=QtCore.Qt.AlignCenter)
 
-#gameinfo label joka näyttää pelaajalle tärkeää tietoa
+#gameinfo label joka näyttää pelaajalle tärkeää tietoa -RIVI 9
 lbl_gameinfo = QLabel(text="Welcome To Blackjack! Place a bet in order to begin.")
 lbl_gameinfo.setStyleSheet(
 "color: 'white';" +
@@ -463,7 +525,8 @@ lbl_gameinfo.setStyleSheet(
 "font-size: 45pc;" +
 "font-weight: bold;"
 )
-maingrid.addWidget(lbl_gameinfo, 6,0, alignment=QtCore.Qt.AlignCenter)
+maingrid.addWidget(lbl_gameinfo, 9,0, alignment=QtCore.Qt.AlignCenter)
+
 
 #quit nappi johonki :)
 btn_quit = QPushButton("Quit")

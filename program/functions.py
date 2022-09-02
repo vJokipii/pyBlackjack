@@ -5,8 +5,8 @@ from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
 
 # Ylimääräinen moduuli puhtaasti koodin luettavuussyistä
-# Tänne on heitetty vähän apufunktioita jotka main moduulissa -
-# sotkisivat koodia ja häiritsisivät luettavuutta entisestään.
+# Tänne on heitetty vähän apufunktioita joiden ei ole pakko olla päämoduulissa -
+# ja siellä vain sotkisivat koodia ja häiritsisivät luettavuutta entisestään.
 
 labeltext = ""
 label = None
