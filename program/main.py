@@ -42,7 +42,7 @@ maingrid.setRowStretch(0, 2) #dealercards
 maingrid.setRowStretch(1, 2) #playercards
 maingrid.setRowStretch(2, 1) #padding
 maingrid.setRowStretch(3, 0) #economy
-maingrid.setRowStretch(4, 0) #playerhand
+maingrid.setRowStretch(4, 0) #padding
 maingrid.setRowStretch(5, 0) #actions
 maingrid.setRowStretch(6, 0) #betting
 maingrid.setRowStretch(7, 0) #padding
@@ -310,7 +310,10 @@ def Check():
     global lbl_gameinfo
     global PlayerTurn
     global DealerTurn
+    global lbl_playerhand
     timer = QTimer()
+
+    lbl_playerhand.setText(str(f"Hand: {playervalue}"))
 
     if len(player) == 2 and playervalue == 21: PlayerWin(True) #Blackjack
     
@@ -318,7 +321,6 @@ def Check():
         lbl_gameinfo.setText("You got a bust! The dealer wins this round.")
         PlayerTurn = False
         timer.singleShot(3000, ResetGame)
-    elif playervalue <= 21 and PlayerTurn: lbl_gameinfo.setText("Your turn. Choose an action.")
     
     if DealerTurn and dealervalue < 17:
         Dealer_Turn()
@@ -327,16 +329,16 @@ def Check():
         if dealervalue >= 17:
             if dealervalue > 21:
                 lbl_gameinfo.setText("The dealer got a bust!")
-                timer.singleShot(4000, PlayerWin)
+                timer.singleShot(5000, PlayerWin)
             else:
                 if dealervalue > playervalue:
                     lbl_gameinfo.setText("The dealer's hand beats yours! The dealer wins this round.")
-                    timer.singleShot(4000, ResetGame)
+                    timer.singleShot(5000, ResetGame)
                 else:
                     if dealervalue == playervalue: Tie()
                     else:
                         lbl_gameinfo.setText("Your hand beats the dealer's!")
-                        timer.singleShot(4000, PlayerWin)
+                        timer.singleShot(5000, PlayerWin)
 
 
 def DealCard_Player():
@@ -357,7 +359,9 @@ def PlayerWin(blackjack = False):
     global bank
     global credits
     global lbl_gameinfo
+    global PlayerTurn
     timer = QTimer()
+    if PlayerTurn == True: Toggle_PlayerTurn()
     payout = 0
     if blackjack:
         payout = int(bet + (bet * 1.5))
@@ -395,6 +399,7 @@ def ResetGame():
     global bank
     global buttons_betting
     global buttons_playeraction
+    global lbl_playerhand
     timer = QTimer()
     deck.resetDeck()
     dealer.clear()
@@ -411,6 +416,7 @@ def ResetGame():
         lbl_gameinfo.setText("The dealer is out of credits! Closing blackjack.")
         timer.singleShot(3000, Quit)
         return
+    lbl_playerhand.setText("")
     lbl_gameinfo.setText("If you would like to play another round, place a bet.")
     GameRunning = False
     PlayerTurn = False
@@ -448,15 +454,15 @@ CreateLabel(lbl_bank, economy)
 lbl_bet = QLabel(text=(f"Bet: {bet}"))
 CreateLabel(lbl_bet, economy)
 
-#playerhand label joka näyttää pelaajalle käden arvon -RIVI 4
-lbl_playerhand = QLabel(text="Your Hand:")
+#playerhand label joka näyttää pelaajalle käden arvon -ECONOMY -RIVI 3
+lbl_playerhand = QLabel(text="")
 lbl_playerhand.setStyleSheet(
-    "color: '#DC143C';" +
+    "color: '#FF4500';" +
     "font: 'Helvetica';" +
     "font-size: 45pc;" +
     "font-weight: bold;"
 )
-maingrid.addWidget(lbl_playerhand, 4,0, alignment=QtCore.Qt.AlignLeft)
+economy.addWidget(lbl_playerhand, 0, alignment=QtCore.Qt.AlignRight)
 
 #actions laatikko johon laitetaan pelaajan napit -RIVI 5
 actions = QHBoxLayout()
@@ -464,22 +470,22 @@ maingrid.addLayout(actions, 5, 0, alignment=QtCore.Qt.AlignCenter)
 
 btn_hit = QPushButton("Hit")
 btn_hit.clicked.connect(Hit)
-CreateButton(btn_hit, actions)
+CreateButton(btn_hit, actions, 95, 35)
 buttons_playeraction.append(btn_hit)
 
 btn_double = QPushButton("Double")
 btn_double.clicked.connect(Double)
-CreateButton(btn_double, actions)
+CreateButton(btn_double, actions, 95, 35)
 buttons_playeraction.append(btn_double)
 
 btn_stand = QPushButton("Stand")
 btn_stand.clicked.connect(Stand)
-CreateButton(btn_stand, actions)
+CreateButton(btn_stand, actions, 95, 35)
 buttons_playeraction.append(btn_stand)
 
 btn_forfeit = QPushButton("Forfeit")
 btn_forfeit.clicked.connect(Forfeit)
-CreateButton(btn_forfeit, actions)
+CreateButton(btn_forfeit, actions, 95, 35)
 buttons_playeraction.append(btn_forfeit)
 
 #betting laatikko johon laitetaan napit joilla nostetaan tai lasketaan panosta -RIVI 6
@@ -487,22 +493,22 @@ betting = QHBoxLayout()
 maingrid.addLayout(betting,6,0, alignment=QtCore.Qt.AlignCenter)
 btn_plusfifty = QPushButton("+50")
 btn_plusfifty.clicked.connect(BetPlusFifty)
-CreateButton(btn_plusfifty, betting, 60, 35)
+CreateButton(btn_plusfifty, betting, 70, 35)
 buttons_betting.append(btn_plusfifty)
 
 btn_plusten = QPushButton("+10")
 btn_plusten.clicked.connect(BetPlusTen)
-CreateButton(btn_plusten, betting, 60, 35)
+CreateButton(btn_plusten, betting, 70, 35)
 buttons_betting.append(btn_plusten)
 
 btn_minusten = QPushButton("-10")
 btn_minusten.clicked.connect(BetMinusTen)
-CreateButton(btn_minusten, betting, 60, 35)
+CreateButton(btn_minusten, betting, 70, 35)
 buttons_betting.append(btn_minusten)
 
 btn_minusfifty = QPushButton("-50")
 btn_minusfifty.clicked.connect(BetMinusFifty)
-CreateButton(btn_minusfifty, betting, 60, 35)
+CreateButton(btn_minusfifty, betting, 70, 35)
 buttons_betting.append(btn_minusfifty)
 
 btn_bet = QPushButton("Place Bet")
@@ -525,7 +531,7 @@ lbl_gameinfo.setStyleSheet(
 "font-size: 45pc;" +
 "font-weight: bold;"
 )
-maingrid.addWidget(lbl_gameinfo, 9,0, alignment=QtCore.Qt.AlignCenter)
+maingrid.addWidget(lbl_gameinfo, 7,0, alignment=QtCore.Qt.AlignCenter)
 
 
 #quit nappi johonki :)
@@ -542,7 +548,7 @@ btn_quit.setStyleSheet(
 "*:hover{background: '#483D8B';" +
 "color: '#FFD700'}"
 )
-maingrid.addWidget(btn_quit, 8,0, alignment=QtCore.Qt.AlignCenter)
+maingrid.addWidget(btn_quit, 9,0, alignment=QtCore.Qt.AlignCenter)
 btn_quit.clicked.connect(Quit)
 
 #Display window
