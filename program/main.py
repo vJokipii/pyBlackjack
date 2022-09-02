@@ -103,12 +103,12 @@ def CreateButton(button, layout, width = 85, height = 35, row = 0, col = 0): #Fu
     button.setFont(MAINFONT)
     button.setStyleSheet(
     "*{border: 3px solid "+MAINCOL+";" +
-    "border-radius: 45px;" +
+    "border-radius: 10px;" +
     "font-size: 20px;" +
     "font-weight: bold;" +
     "color: 'white'}" +
     "*:hover{background: '#483D8B';" +
-    "color: '#FFD700'}"
+    "color: "+MAINCOL+";}"
     )
     if layout == maingrid:
         layout.addWidget(button, row, col)
@@ -144,6 +144,7 @@ def HighlightButtons(buttons, toggle):
         for i in buttons:
             i.setCursor(QCursor(QtCore.Qt.ForbiddenCursor))
             i.setStyleSheet("*{border: 3px solid '#696969';" +
+            "border-radius: 10px;" +
             "color: '#696969';}")
     else:
         #Listan napit palautetaan
@@ -151,12 +152,12 @@ def HighlightButtons(buttons, toggle):
             i.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
             i.setStyleSheet(
             "*{border: 3px solid "+MAINCOL+";" +
-            "border-radius: 45px;" +
+            "border-radius: 10px;" +
             "font-size: 10px;" +
             "font-weight: bold;" +
             "color: 'white'}" +
             "*:hover{background: '#483D8B';" +
-            "color: '#FFD700'}"
+            "color: '#FF4500'}"
             )
 
 def AddCard(card, layout):
@@ -596,12 +597,12 @@ btn_quit.setFixedWidth(60)
 btn_quit.setFixedHeight(25)
 btn_quit.setStyleSheet(
 "*{border: 3px solid '"+MAINCOL+"';" +
-"border-radius: 45px;" +
+"border-radius: 10px;" +
 "font-size: 10px;" +
 "font-weight: bold;" +
 "color: 'white'}" +
 "*:hover{background: '#483D8B';" +
-"color: '#FFD700'}"
+"color: '#FF4500'}"
 )
 maingrid.addWidget(btn_quit, 12,0, alignment=QtCore.Qt.AlignCenter)
 btn_quit.clicked.connect(Quit)
