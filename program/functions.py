@@ -25,6 +25,7 @@ def BetPlusTen(bet, lbl_info, lbl_bet):
 
 def BetMinusFifty(bet,lbl_info, lbl_bet):
     if bet >= 50: bet -= 50
+    elif bet < 50 and bet > 0: bet -= bet
     if bet > 0 : lbl_info.setText(f"You are about to bet {bet} credits.")
     else : lbl_info.setText(f"Welcome To Blackjack! Place a bet in order to begin.")
     lbl_bet.setText(f"Bet: {bet}")
