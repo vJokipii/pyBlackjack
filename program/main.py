@@ -157,7 +157,7 @@ def HighlightButtons(buttons, toggle):
             "font-weight: bold;" +
             "color: 'white'}" +
             "*:hover{background: '#483D8B';" +
-            "color: '#FF4500'}"
+            "color: '#FFD700'}"
             )
 
 def AddCard(card, layout):
